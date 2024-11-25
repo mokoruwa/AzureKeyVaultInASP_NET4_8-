@@ -1,0 +1,5 @@
+Set Up Configuration
+
+<appSettings>
+  <add key="KeyVaultUrl" value="https://your-keyvault-name.vault.azure.net/" />
+</appSettings>
