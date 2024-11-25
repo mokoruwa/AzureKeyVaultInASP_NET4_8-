@@ -1,0 +1,105 @@
+
+To implement the functionality for:
+
+csharp
+Copy code
+var secrets = AzureKeyVaultManager.GetAuthenticationSecrets();
+You can extend the AzureKeyVaultManager class to include a method GetAuthenticationSecrets that retrieves multiple secrets (e.g., ClientId, TenantId, ClientSecret) from Azure Key Vault and returns them as a dictionary or a custom class.
+
+Here’s how to implement this:
+
+1. Custom Class to Store Secrets
+Create a class to hold authentication secrets.
+
+csharp
+Copy code
+public class AuthenticationSecrets
+{
+    public string ClientId { get; set; }
+    public string TenantId { get; set; }
+    public string ClientSecret { get; set; }
+}
+2. AzureKeyVaultManager Class
+Enhance the AzureKeyVaultManager class with a method to retrieve multiple secrets.
+
+csharp
+Copy code
+using Azure.Identity;
+using Azure.Security.KeyVault.Secrets;
+using System;
+using System.Configuration;
+
+public static class AzureKeyVaultManager
+{
+    private static SecretClient _secretClient;
+
+    static AzureKeyVaultManager()
+    {
+        try
+        {
+            string keyVaultUrl = ConfigurationManager.AppSettings["KeyVaultUrl"];
+            if (string.IsNullOrEmpty(keyVaultUrl))
+            {
+                throw new InvalidOperationException("Key Vault URL is not configured or is empty.");
+            }
+
+            _secretClient = new SecretClient(new Uri(keyVaultUrl), new DefaultAzureCredential());
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException("Failed to initialize AzureKeyVaultManager.", ex);
+        }
+    }
+
+    public static AuthenticationSecrets GetAuthenticationSecrets()
+    {
+        try
+        {
+            // Retrieve secrets from Azure Key Vault
+            string clientId = _secretClient.GetSecret("ClientId").Value.Value;
+            string tenantId = _secretClient.GetSecret("TenantId").Value.Value;
+            string clientSecret = _secretClient.GetSecret("ClientSecret").Value.Value;
+
+            // Return them as an object
+            return new AuthenticationSecrets
+            {
+                ClientId = clientId,
+                TenantId = tenantId,
+                ClientSecret = clientSecret
+            };
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException("Failed to retrieve authentication secrets.", ex);
+        }
+    }
+}
+3. Usage in Razor Page
+Use the AzureKeyVaultManager in your Razor page to retrieve and utilize the secrets.
+
+Example
+csharp
+Copy code
+using System;
+using System.Web.UI;
+
+public partial class Index : Page
+{
+    protected void Page_Load(object sender, EventArgs e)
+    {
+        try
+        {
+            // Fetch secrets
+            var secrets = AzureKeyVaultManager.GetAuthenticationSecrets();
+
+            // Display or use the secrets
+            Response.Write($"ClientId: {secrets.ClientId}<br>");
+            Response.Write($"TenantId: {secrets.TenantId}<br>");
+            // Avoid displaying sensitive data like ClientSecret in production
+        }
+        catch (Exception ex)
+        {
+            Response.Write($"Error: {ex.Message}");
+        }
+    }
+}
